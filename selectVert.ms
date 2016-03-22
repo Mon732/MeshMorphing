@@ -1,0 +1,1 @@
+polyop.setVertSelection $ 1

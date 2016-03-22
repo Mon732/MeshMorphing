@@ -310,4 +310,3 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   skinnedMesh: 1
-  cachedMesh: {fileID: 0}

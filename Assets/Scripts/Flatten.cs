@@ -1,6 +1,8 @@
 ﻿using UnityEngine;
 using System;
 using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
 
 public class Flatten : MonoBehaviour
 {
@@ -9,9 +11,14 @@ public class Flatten : MonoBehaviour
     Mesh cachedMesh;
     float averageTriangleArea;
 
+    [SerializeField]
+    List<int> vertsToDisplay;
+
 	// Use this for initialization
 	void Start ()
     {
+        float startTime = Time.realtimeSinceStartup;
+
         if (!skinnedMesh)
         {
             MeshFilter meshFilter = GetComponent<MeshFilter>();
@@ -28,17 +35,37 @@ public class Flatten : MonoBehaviour
 
         averageTriangleArea = calcAverageTriangleArea(cachedMesh.vertices, cachedMesh.triangles);
 
-        
+        int vert = 0;
+        int[] neighbours = findNeighbours(vert, cachedMesh.triangles);
+
+        vertsToDisplay = new List<int>();
+        vertsToDisplay.Add(vert);
+
+        string output = "Neighbours of " + vert + ": ";
+
+        foreach (int neighbour in neighbours)
+        {
+            output += neighbour + ", ";
+            vertsToDisplay.Add(neighbour);
+        }
+
+        Debug.Log(output);
 
         //calcCurvature(cachedMesh.vertices[0], )
+
+        float endTime = Time.realtimeSinceStartup;
+        float deltaTime = (endTime - startTime);
+
+        Debug.Log("Startup took " + deltaTime + "seconds.");
 	}
 	
 	// Update is called once per frame
 	void Update ()
     {
-        Debug.DrawLine(cachedMesh.vertices[0], cachedMesh.vertices[1]);
-        Debug.DrawLine(cachedMesh.vertices[0], cachedMesh.vertices[2]);
-        Debug.DrawLine(cachedMesh.vertices[1], cachedMesh.vertices[2]);
+        for (int i = 0; i < vertsToDisplay.Count; i++)
+        {
+            Debug.DrawLine(cachedMesh.vertices[vertsToDisplay[0]], cachedMesh.vertices[vertsToDisplay[i]]);
+        }
 	}
 
     //point p, neighbours pᵢ
@@ -98,5 +125,24 @@ public class Flatten : MonoBehaviour
         }
 
         return areaSum / (cachedMesh.triangles.Length / 3);
+    }
+
+    int[] findNeighbours(int index, int[] triangles)
+    {
+        List<int> neighbours = new List<int>();
+        List<int> positions = Enumerable.Range(0, triangles.Length).Where(i => triangles[i] == index).ToList();
+
+        foreach (int position in positions)
+        {
+            int triNumber = position / 3; //Which triangle
+
+            neighbours.Add(triangles[triNumber    ]);
+            neighbours.Add(triangles[triNumber + 1]);
+            neighbours.Add(triangles[triNumber + 2]);
+        }
+
+        neighbours = Enumerable.Range(0, neighbours.Count).Where(i => neighbours[i] != index).Distinct().ToList();
+
+        return neighbours.ToArray();
     }
 }
