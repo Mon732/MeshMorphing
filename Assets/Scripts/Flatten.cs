@@ -14,6 +14,12 @@ public class Flatten : MonoBehaviour
     [SerializeField]
     List<int> vertsToDisplay;
 
+    [SerializeField]
+    Vector3[] verts;
+
+    [SerializeField]
+    int[] triangles;
+
 	// Use this for initialization
 	void Start ()
     {
@@ -36,12 +42,12 @@ public class Flatten : MonoBehaviour
         averageTriangleArea = calcAverageTriangleArea(cachedMesh.vertices, cachedMesh.triangles);
 
         int vert = 0;
-        int[] neighbours = findNeighbours(vert, cachedMesh.triangles);
+        int[] neighbours = findNeighbours(vert, cachedMesh.vertices, cachedMesh.triangles);
 
         vertsToDisplay = new List<int>();
         vertsToDisplay.Add(vert);
 
-        string output = "Neighbours of " + vert + ": ";
+        string output = gameObject.name + ", neighbours of " + vert + ": ";
 
         foreach (int neighbour in neighbours)
         {
@@ -52,6 +58,9 @@ public class Flatten : MonoBehaviour
         Debug.Log(output);
 
         //calcCurvature(cachedMesh.vertices[0], )
+
+        verts = cachedMesh.vertices;
+        triangles = cachedMesh.triangles;
 
         float endTime = Time.realtimeSinceStartup;
         float deltaTime = (endTime - startTime);
@@ -64,7 +73,7 @@ public class Flatten : MonoBehaviour
     {
         for (int i = 0; i < vertsToDisplay.Count; i++)
         {
-            Debug.DrawLine(cachedMesh.vertices[vertsToDisplay[0]], cachedMesh.vertices[vertsToDisplay[i]]);
+            Debug.DrawLine(cachedMesh.vertices[vertsToDisplay[0]] + transform.position, cachedMesh.vertices[vertsToDisplay[i]] + transform.position);
         }
 	}
 
@@ -127,18 +136,23 @@ public class Flatten : MonoBehaviour
         return areaSum / (cachedMesh.triangles.Length / 3);
     }
 
-    int[] findNeighbours(int index, int[] triangles)
+    int[] findNeighbours(int index, Vector3[] vertices, int[] triangles)
     {
         List<int> neighbours = new List<int>();
-        List<int> positions = Enumerable.Range(0, triangles.Length).Where(i => triangles[i] == index).ToList();
-
-        foreach (int position in positions)
+        List<int> verts = Enumerable.Range(0, vertices.Length).Where(i => vertices[i] == vertices[index]).ToList();
+        
+        foreach (int vert in verts)
         {
-            int triNumber = position / 3; //Which triangle
+            List<int> positions = Enumerable.Range(0, triangles.Length).Where(i => triangles[i] == index).ToList();
 
-            neighbours.Add(triangles[triNumber    ]);
-            neighbours.Add(triangles[triNumber + 1]);
-            neighbours.Add(triangles[triNumber + 2]);
+            foreach (int position in positions)
+            {
+                int triNumber = position / 3; //Which triangle
+
+                neighbours.Add(triangles[triNumber]);
+                neighbours.Add(triangles[triNumber + 1]);
+                neighbours.Add(triangles[triNumber + 2]);
+            }
         }
 
         neighbours = Enumerable.Range(0, neighbours.Count).Where(i => neighbours[i] != index).Distinct().ToList();
