@@ -49,15 +49,18 @@ public class Flatten : MonoBehaviour
 
         string output = gameObject.name + ", neighbours of " + vert + ": ";
 
+        List<Vector3> neighbourVerts = new List<Vector3>();
+
         foreach (int neighbour in neighbours)
         {
             output += neighbour + ", ";
             vertsToDisplay.Add(neighbour);
+            neighbourVerts.Add(cachedMesh.vertices[neighbour]);
         }
 
         Debug.Log(output);
 
-        //calcCurvature(cachedMesh.vertices[0], )
+        calcCurvature(cachedMesh.vertices[0], neighbourVerts.ToArray());
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
@@ -140,14 +143,14 @@ public class Flatten : MonoBehaviour
     {
         List<int> neighbours = new List<int>();
         List<int> verts = Enumerable.Range(0, vertices.Length).Where(i => vertices[i] == vertices[index]).ToList();
-        
+
         foreach (int vert in verts)
         {
-            List<int> positions = Enumerable.Range(0, triangles.Length).Where(i => triangles[i] == index).ToList();
+            List<int> positions = Enumerable.Range(0, triangles.Length).Where(i => triangles[i] == vert).ToList();
 
             foreach (int position in positions)
             {
-                int triNumber = position / 3; //Which triangle
+                int triNumber = (position / 3) * 3; //Which triangle
 
                 neighbours.Add(triangles[triNumber]);
                 neighbours.Add(triangles[triNumber + 1]);
@@ -155,7 +158,7 @@ public class Flatten : MonoBehaviour
             }
         }
 
-        neighbours = Enumerable.Range(0, neighbours.Count).Where(i => neighbours[i] != index).Distinct().ToList();
+        neighbours = neighbours.Distinct().ToList();
 
         return neighbours.ToArray();
     }
