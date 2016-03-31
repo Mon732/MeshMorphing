@@ -49,6 +49,8 @@ public class Flatten : MonoBehaviour
 
         string output = gameObject.name + ", neighbours of " + vert + ": ";
 
+        renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
+
         List<Vector3> neighbourVerts = new List<Vector3>();
 
         foreach (int neighbour in neighbours)
@@ -60,7 +62,7 @@ public class Flatten : MonoBehaviour
 
         Debug.Log(output);
 
-        calcCurvature(cachedMesh.vertices[0], neighbourVerts.ToArray());
+        Debug.Log(gameObject.name + ", curvature of " + vert + ": " + calcCurvature(cachedMesh.vertices[vert], neighbourVerts.ToArray()));
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
@@ -68,7 +70,7 @@ public class Flatten : MonoBehaviour
         float endTime = Time.realtimeSinceStartup;
         float deltaTime = (endTime - startTime);
 
-        Debug.Log("Startup took " + deltaTime + "seconds.");
+        Debug.Log("Startup took " + (deltaTime * 1000) + "ms.");
 	}
 	
 	// Update is called once per frame
@@ -85,19 +87,19 @@ public class Flatten : MonoBehaviour
     {
         float angleSum = 0; //∑ᵢαᵢ
 
-        for (int i = 0; i < neighbours.Length; i++)
+        for (int i = 0; i < (neighbours.Length - 1); i++)
         {
-            angleSum += calcAngle(point, neighbours[i], neighbours[i + 1]);
+            angleSum += calcAngle(point, neighbours[i], neighbours[(i + 1)]);
         }
 
         float areaSum = 0; //∑ᵢAᵢ(p)
 
-        for (int i = 0; i < neighbours.Length; i++)
+        for (int i = 0; i < (neighbours.Length - 1); i++)
         {
-            areaSum += calcTriangleArea(point, neighbours[i], neighbours[i + 1]);
+            areaSum += calcTriangleArea(point, neighbours[i], neighbours[(i + 1)]);
         }
 
-        float curvature = ((2*Mathf.PI) - angleSum)/(averageTriangleArea + (areaSum/3)); //Kp
+        float curvature = ((2*Mathf.PI) - (Mathf.Deg2Rad*angleSum))/(averageTriangleArea + (areaSum/3)); //Kp
 
         return curvature;
     }
@@ -158,8 +160,47 @@ public class Flatten : MonoBehaviour
             }
         }
 
-        neighbours = neighbours.Distinct().ToList();
+        return neighbours.Distinct().ToArray();
+    }
 
-        return neighbours.ToArray();
+    int[] renderedVertsToMeshVerts(int[] vertIndexes, Vector3[] meshVerts)
+    {
+        List<Vector3> verts = new List<Vector3>();
+        List<int> indexes = vertIndexes.ToList();
+
+        indexes.Sort();
+
+        foreach (int index in vertIndexes)
+        {
+            if (verts.Contains(meshVerts[index]))
+            {
+                indexes.Remove(index);
+            }
+            else
+            {
+                verts.Add(meshVerts[index]);
+            }
+        }
+
+        return indexes.ToArray();
+    }
+
+    int[] meshVertsToRenderedVerts(int[] vertIndexes, Vector3[] meshVerts)
+    {
+        List<int> indexes = vertIndexes.ToList();
+
+        indexes.Sort();
+
+        foreach (int index in indexes)
+        {
+            List<int> renderedVerts = Enumerable.Range(0, meshVerts.Length).Where(i => meshVerts[i] == meshVerts[index]).ToList();
+
+            foreach (int renderedVert in renderedVerts)
+            {
+                indexes.Add(renderedVert);
+            }
+        }
+
+        return indexes.Distinct().ToArray();
     }
 }
