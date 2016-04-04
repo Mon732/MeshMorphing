@@ -6,8 +6,6 @@ using System.Linq;
 
 public class Flatten : MonoBehaviour
 {
-    public bool skinnedMesh = false;
-
     Mesh cachedMesh;
     float averageTriangleArea;
 
@@ -25,18 +23,18 @@ public class Flatten : MonoBehaviour
     {
         float startTime = Time.realtimeSinceStartup;
 
-        if (!skinnedMesh)
-        {
-            MeshFilter meshFilter = GetComponent<MeshFilter>();
-            cachedMesh = meshFilter.mesh;
-        }
-        else
+        try
         {
             SkinnedMeshRenderer meshFilter = GetComponent<SkinnedMeshRenderer>();
             Mesh mesh = (Mesh)Instantiate(meshFilter.sharedMesh);
             meshFilter.sharedMesh = mesh;
 
             cachedMesh = mesh;
+        }
+        catch (MissingComponentException)
+        {
+            MeshFilter meshFilter = GetComponent<MeshFilter>();
+            cachedMesh = meshFilter.mesh;
         }
 
         averageTriangleArea = calcAverageTriangleArea(cachedMesh.vertices, cachedMesh.triangles);
@@ -49,7 +47,7 @@ public class Flatten : MonoBehaviour
 
         string output = gameObject.name + ", neighbours of " + vert + ": ";
 
-        renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
+        neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
 
         List<Vector3> neighbourVerts = new List<Vector3>();
 
@@ -166,30 +164,28 @@ public class Flatten : MonoBehaviour
     int[] renderedVertsToMeshVerts(int[] vertIndexes, Vector3[] meshVerts)
     {
         List<Vector3> verts = new List<Vector3>();
-        List<int> indexes = vertIndexes.ToList();
 
-        indexes.Sort();
-
-        foreach (int index in vertIndexes)
+        foreach (int vertIndex in vertIndexes)
         {
-            if (verts.Contains(meshVerts[index]))
-            {
-                indexes.Remove(index);
-            }
-            else
-            {
-                verts.Add(meshVerts[index]);
-            }
+            verts.Add(meshVerts[vertIndex]);
         }
 
-        return indexes.ToArray();
+        verts = verts.Distinct().ToList();
+        List<int> newVerts = new List<int>();
+
+        foreach (Vector3 vert in verts)
+        {
+            newVerts.Add(Array.IndexOf(meshVerts, vert));
+        }
+
+        return newVerts.ToArray();
     }
 
     int[] meshVertsToRenderedVerts(int[] vertIndexes, Vector3[] meshVerts)
     {
         List<int> indexes = vertIndexes.ToList();
 
-        indexes.Sort();
+        //indexes.Sort();
 
         foreach (int index in indexes)
         {
