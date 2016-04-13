@@ -18,6 +18,9 @@ public class Flatten : MonoBehaviour
     [SerializeField]
     int[] triangles;
 
+    [SerializeField]
+    int[] loopVerts;
+
 	// Use this for initialization
 	void Start ()
     {
@@ -39,8 +42,10 @@ public class Flatten : MonoBehaviour
 
         averageTriangleArea = calcAverageTriangleArea(cachedMesh.vertices, cachedMesh.triangles);
 
-        int vert = 0;
+        int vert = 12;
         int[] neighbours = findNeighbours(vert, cachedMesh.vertices, cachedMesh.triangles);
+
+        loopVerts = getLoop(neighbours, cachedMesh.vertices);
 
         vertsToDisplay = new List<int>();
         vertsToDisplay.Add(vert);
@@ -74,9 +79,16 @@ public class Flatten : MonoBehaviour
 	// Update is called once per frame
 	void Update ()
     {
+        Vector3 position = transform.position;
+
         for (int i = 0; i < vertsToDisplay.Count; i++)
         {
             Debug.DrawLine(cachedMesh.vertices[vertsToDisplay[0]] + transform.position, cachedMesh.vertices[vertsToDisplay[i]] + transform.position);
+        }
+
+        for (int i = 1; i < loopVerts.Length; i++)
+        {
+            Debug.DrawLine(cachedMesh.vertices[loopVerts[i]] + position, cachedMesh.vertices[loopVerts[((i + 1) % (loopVerts.Length - 1)) + 1]] + position, Color.yellow);
         }
 	}
 
@@ -158,7 +170,11 @@ public class Flatten : MonoBehaviour
             }
         }
 
-        return neighbours.Distinct().ToArray();
+        neighbours = neighbours.Distinct().ToList();
+        neighbours.Remove(index);
+        neighbours.Insert(0, index);
+
+        return neighbours.ToArray();
     }
 
     int[] renderedVertsToMeshVerts(int[] vertIndexes, Vector3[] meshVerts)
@@ -198,5 +214,80 @@ public class Flatten : MonoBehaviour
         }
 
         return indexes.Distinct().ToArray();
+    }
+
+    int[] getLoop(int[] verts, Vector3[] meshVertices)
+    {
+        Vector3[] vertPositions = new Vector3[verts.Length];
+
+        for (int i = 0; i < verts.Length; i++)
+        {
+            vertPositions[i] = meshVertices[verts[i]];
+        }
+
+        int[] loopVerts = new int[verts.Length];
+        loopVerts[0] = 0;
+
+
+        for (int j = 1; j < verts.Length; j++)
+        {
+            float[] angles = new float[verts.Length - 1];
+
+            for (int i = 0; i < angles.Length; i++)
+            {
+                angles[i] = 361; //angle will never be above 180.
+            }
+
+            for (int i = 1; i < verts.Length; i++)
+            {
+                if (i != j)
+                {
+                    Vector3 lhs = vertPositions[j] - vertPositions[0];
+                    Vector3 rhs = vertPositions[i] - vertPositions[0];
+
+                    Vector3 crossProduct = Vector3.Cross(lhs, rhs);
+
+                    Debug.Log(j + " to " + i + ": " + crossProduct);
+
+                    float angle = calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
+
+                    if (crossProduct.y > 0)
+                    {
+                        angles[i - 1] = angle;
+                    }
+                    else
+                    {
+                        angles[i - 1] = 360 - angle;
+                    }
+                }
+            }
+
+            int smallestAngleTo = -1;
+            float smallestAngle = 361;
+
+            for (int i = 0; i < angles.Length; i++)
+            {
+                if (angles[i] < smallestAngle)
+                {
+                    smallestAngle = angles[i];
+                    smallestAngleTo = i + 1;
+                }
+            }
+
+            if (smallestAngle < 361)
+            {
+                Debug.Log("Next vert is " + smallestAngleTo + " at " + smallestAngle + " degrees");
+                loopVerts[j] = smallestAngleTo;
+            }
+        }
+
+        int[] sortedVerts = new int[verts.Length];
+
+        for (int i = 0; i < loopVerts.Length; i++)
+        {
+            sortedVerts[i] = verts[loopVerts[i]];
+        }
+
+        return sortedVerts;
     }
 }

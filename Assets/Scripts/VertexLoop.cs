@@ -65,7 +65,6 @@ public class VertexLoop : MonoBehaviour
         int[] loopVerts = new int[verts.Length];
         loopVerts[0] = verts[0];
 
-
         for (int j = 1; j < verts.Length; j++)
         {
             float[] angles = new float[verts.Length - 1];
