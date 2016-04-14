@@ -86,9 +86,11 @@ public class Flatten : MonoBehaviour
             Debug.DrawLine(cachedMesh.vertices[vertsToDisplay[0]] + transform.position, cachedMesh.vertices[vertsToDisplay[i]] + transform.position);
         }
 
-        for (int i = 1; i < loopVerts.Length; i++)
+        for (int i = 0; i < (loopVerts.Length - 1); i++)
         {
-            Debug.DrawLine(cachedMesh.vertices[loopVerts[i]] + position, cachedMesh.vertices[loopVerts[((i + 1) % (loopVerts.Length - 1)) + 1]] + position, Color.yellow);
+            int j = ((i + 1) % (loopVerts.Length - 1));
+
+            Debug.DrawLine(cachedMesh.vertices[loopVerts[i + 1]] + position, cachedMesh.vertices[loopVerts[j + 1]] + position, Color.yellow);
         }
 	}
 
