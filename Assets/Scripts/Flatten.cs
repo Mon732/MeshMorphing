@@ -44,15 +44,16 @@ public class Flatten : MonoBehaviour
 
         int vert = 12;
         int[] neighbours = findNeighbours(vert, cachedMesh.vertices, cachedMesh.triangles);
+        neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
 
-        loopVerts = getLoop(neighbours, cachedMesh.vertices);
+        neighbours = getLoop(neighbours, cachedMesh.vertices);
+
+        loopVerts = neighbours;
 
         vertsToDisplay = new List<int>();
         vertsToDisplay.Add(vert);
 
         string output = gameObject.name + ", neighbours of " + vert + ": ";
-
-        neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
 
         List<Vector3> neighbourVerts = new List<Vector3>();
 
@@ -65,7 +66,9 @@ public class Flatten : MonoBehaviour
 
         Debug.Log(output);
 
-        Debug.Log(gameObject.name + ", curvature of " + vert + ": " + calcCurvature(cachedMesh.vertices[vert], neighbourVerts.ToArray()));
+        float curvature = calcCurvature(cachedMesh.vertices[vert], neighbourVerts.ToArray());
+
+        Debug.Log(gameObject.name + ", curvature of " + vert + ": " + curvature);
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
@@ -249,7 +252,7 @@ public class Flatten : MonoBehaviour
 
                     Vector3 crossProduct = Vector3.Cross(lhs, rhs);
 
-                    Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
+                    //Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
 
                     float angle = calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
 
@@ -278,7 +281,7 @@ public class Flatten : MonoBehaviour
 
             if (smallestAngle < 361)
             {
-                Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
+                //Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
                 loopVerts[j] = smallestAngleTo;
             }
         }
