@@ -237,7 +237,7 @@ public class Flatten : MonoBehaviour
 
             for (int i = 0; i < angles.Length; i++)
             {
-                angles[i] = 361; //angle will never be above 180.
+                angles[i] = 361; //angle will never be above 360.
             }
 
             for (int i = 1; i < verts.Length; i++)
@@ -249,7 +249,7 @@ public class Flatten : MonoBehaviour
 
                     Vector3 crossProduct = Vector3.Cross(lhs, rhs);
 
-                    Debug.Log(j + " to " + i + ": " + crossProduct);
+                    Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
 
                     float angle = calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
 
@@ -278,16 +278,20 @@ public class Flatten : MonoBehaviour
 
             if (smallestAngle < 361)
             {
-                Debug.Log("Next vert is " + smallestAngleTo + " at " + smallestAngle + " degrees");
+                Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
                 loopVerts[j] = smallestAngleTo;
             }
         }
 
         int[] sortedVerts = new int[verts.Length];
+        sortedVerts[0] = verts[0];
 
-        for (int i = 0; i < loopVerts.Length; i++)
+        int currentVert = 1;
+
+        for (int i = 1; i < sortedVerts.Length; i++)
         {
-            sortedVerts[i] = verts[loopVerts[i]];
+            sortedVerts[i] = verts[currentVert];
+            currentVert = loopVerts[currentVert];
         }
 
         return sortedVerts;
