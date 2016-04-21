@@ -21,6 +21,9 @@ public class Flatten : MonoBehaviour
     [SerializeField]
     int[] loopVerts;
 
+    int highestVert;
+    float highestCurvature;
+
 	// Use this for initialization
 	void Start ()
     {
@@ -42,33 +45,46 @@ public class Flatten : MonoBehaviour
 
         averageTriangleArea = calcAverageTriangleArea(cachedMesh.vertices, cachedMesh.triangles);
 
-        int vert = 12;
-        int[] neighbours = findNeighbours(vert, cachedMesh.vertices, cachedMesh.triangles);
-        neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
+        //int vert = 12;
 
-        neighbours = getLoop(neighbours, cachedMesh.vertices);
-
-        loopVerts = neighbours;
-
-        vertsToDisplay = new List<int>();
-        vertsToDisplay.Add(vert);
-
-        string output = gameObject.name + ", neighbours of " + vert + ": ";
-
-        List<Vector3> neighbourVerts = new List<Vector3>();
-
-        foreach (int neighbour in neighbours)
+        for (int i = 0; i < cachedMesh.vertices.Length; i++)
         {
-            output += neighbour + ", ";
-            vertsToDisplay.Add(neighbour);
-            neighbourVerts.Add(cachedMesh.vertices[neighbour]);
+            int[] neighbours = findNeighbours(i, cachedMesh.vertices, cachedMesh.triangles);
+            neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
+
+            neighbours = getLoop(neighbours, cachedMesh.vertices);
+
+            loopVerts = neighbours;
+
+            vertsToDisplay = new List<int>();
+            vertsToDisplay.Add(i);
+
+            string output = gameObject.name + ", neighbours of " + i + ": ";
+
+            List<Vector3> neighbourVerts = new List<Vector3>();
+
+            foreach (int neighbour in neighbours)
+            {
+                output += neighbour + ", ";
+                vertsToDisplay.Add(neighbour);
+                neighbourVerts.Add(cachedMesh.vertices[neighbour]);
+            }
+
+            Debug.Log(output);
+
+            float curvature = calcCurvature(cachedMesh.vertices[i], neighbourVerts.ToArray());
+
+            Debug.Log(gameObject.name + ", curvature of " + i + ": " + curvature);
+
+            if (curvature > highestCurvature)
+            {
+                highestCurvature = curvature;
+                highestVert = i;
+            }
         }
 
-        Debug.Log(output);
-
-        float curvature = calcCurvature(cachedMesh.vertices[vert], neighbourVerts.ToArray());
-
-        Debug.Log(gameObject.name + ", curvature of " + vert + ": " + curvature);
+        vertsToDisplay = findNeighbours(highestVert, cachedMesh.vertices, cachedMesh.triangles).ToList();
+        loopVerts = getLoop(vertsToDisplay.ToArray(), cachedMesh.vertices);
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
