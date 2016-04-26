@@ -24,6 +24,12 @@ public class Flatten : MonoBehaviour
     int highestVert;
     float highestCurvature;
 
+    struct edgeStruct
+    {
+        public int vertexA;
+        public int vertexB;
+    }
+
 	// Use this for initialization
 	void Start ()
     {
@@ -47,12 +53,15 @@ public class Flatten : MonoBehaviour
 
         //int vert = 12;
 
-        for (int i = 0; i < cachedMesh.vertices.Length; i++)
-        {
+        //for (int i = 0; i < cachedMesh.vertices.Length; i++)
+        //{
+            int i = 12;
+            //int i = 260;
+
             int[] neighbours = findNeighbours(i, cachedMesh.vertices, cachedMesh.triangles);
             neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
 
-            neighbours = getLoop(neighbours, cachedMesh.vertices);
+            neighbours = getLoop(neighbours, cachedMesh.vertices, cachedMesh.triangles);
 
             loopVerts = neighbours;
 
@@ -65,9 +74,12 @@ public class Flatten : MonoBehaviour
 
             foreach (int neighbour in neighbours)
             {
-                output += neighbour + ", ";
-                vertsToDisplay.Add(neighbour);
-                neighbourVerts.Add(cachedMesh.vertices[neighbour]);
+                if (neighbour != i)
+                {
+                    output += neighbour + ", ";
+                    vertsToDisplay.Add(neighbour);
+                    neighbourVerts.Add(cachedMesh.vertices[neighbour]);
+                }
             }
 
             Debug.Log(output);
@@ -81,10 +93,10 @@ public class Flatten : MonoBehaviour
                 highestCurvature = curvature;
                 highestVert = i;
             }
-        }
+        //}
 
-        vertsToDisplay = findNeighbours(highestVert, cachedMesh.vertices, cachedMesh.triangles).ToList();
-        loopVerts = getLoop(vertsToDisplay.ToArray(), cachedMesh.vertices);
+        //vertsToDisplay = findNeighbours(highestVert, cachedMesh.vertices, cachedMesh.triangles).ToList();
+        //loopVerts = getLoop(vertsToDisplay.ToArray(), cachedMesh.vertices);
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
@@ -118,19 +130,22 @@ public class Flatten : MonoBehaviour
     {
         float angleSum = 0; //∑ᵢαᵢ
 
-        for (int i = 0; i < (neighbours.Length - 1); i++)
+        for (int i = 0; i < neighbours.Length; i++)
         {
-            angleSum += calcAngle(point, neighbours[i], neighbours[(i + 1)]);
+            angleSum += calcAngle(point, neighbours[i], neighbours[(i + 1) % neighbours.Length]);
         }
 
         float areaSum = 0; //∑ᵢAᵢ(p)
 
-        for (int i = 0; i < (neighbours.Length - 1); i++)
+        for (int i = 0; i < neighbours.Length; i++)
         {
-            areaSum += calcTriangleArea(point, neighbours[i], neighbours[(i + 1)]);
+            areaSum += calcTriangleArea(point, neighbours[i], neighbours[(i + 1) % neighbours.Length]);
         }
 
-        float curvature = ((2*Mathf.PI) - (Mathf.Deg2Rad*angleSum))/(averageTriangleArea + (areaSum/3)); //Kp
+        Debug.Log("angleSum: " + (angleSum * Mathf.Rad2Deg));
+        Debug.Log("2Pi - angleSum:" + ((2 * Mathf.PI) - (angleSum)));
+
+        float curvature = ((2*Mathf.PI) - (angleSum))/(averageTriangleArea + (areaSum/3)); //Kp
 
         return curvature;
     }
@@ -142,7 +157,11 @@ public class Flatten : MonoBehaviour
         Vector3 vectorA = point1 - point0;
         Vector3 vectorB = point2 - point0;
 
-        return Vector3.Angle(vectorA, vectorB);
+        float angle = Vector3.Angle(vectorA, vectorB);
+
+        angle = Mathf.Deg2Rad * angle;
+
+        return angle;
     }
 
     float calcTriangleArea(Vector3 point0, Vector3 point1, Vector3 point2)
@@ -151,7 +170,7 @@ public class Flatten : MonoBehaviour
         Vector3 vectorB = point2 - point0;
         float angle = calcAngle(point0, point1, point2);
 
-        float area = 0.5f * vectorA.magnitude * vectorB.magnitude * Mathf.Sin(Mathf.Deg2Rad * angle);
+        float area = 0.5f * vectorA.magnitude * vectorB.magnitude * Mathf.Sin(angle);
 
         return area;
     }
@@ -169,7 +188,11 @@ public class Flatten : MonoBehaviour
             areaSum += calcTriangleArea(point0, point1, point2);
         }
 
-        return areaSum / (cachedMesh.triangles.Length / 3);
+        float areaAverage = areaSum / (cachedMesh.triangles.Length / 3);
+
+        Debug.Log("Average Area: " + areaAverage);
+
+        return areaAverage;
     }
 
     int[] findNeighbours(int index, Vector3[] vertices, int[] triangles)
@@ -222,13 +245,11 @@ public class Flatten : MonoBehaviour
     {
         List<int> indexes = vertIndexes.ToList();
 
-        //indexes.Sort();
-
-        foreach (int index in indexes)
+        foreach (int index in indexes.ToList())
         {
             List<int> renderedVerts = Enumerable.Range(0, meshVerts.Length).Where(i => meshVerts[i] == meshVerts[index]).ToList();
 
-            foreach (int renderedVert in renderedVerts)
+            foreach (int renderedVert in renderedVerts.ToList())
             {
                 indexes.Add(renderedVert);
             }
@@ -237,82 +258,119 @@ public class Flatten : MonoBehaviour
         return indexes.Distinct().ToArray();
     }
 
-    int[] getLoop(int[] verts, Vector3[] meshVertices)
+    int[] getLoop(int[] verts, Vector3[] meshVertices, int[] meshTriangles)
     {
-        Vector3[] vertPositions = new Vector3[verts.Length];
+        List<int> vertsList = verts.ToList();
+        vertsList.RemoveAt(0);
+        verts = vertsList.ToArray();
 
-        for (int i = 0; i < verts.Length; i++)
+        List<int> renderedVerts = meshVertsToRenderedVerts(verts, meshVertices).ToList();
+
+        foreach (int vert in verts)
         {
-            vertPositions[i] = meshVertices[verts[i]];
-        }
+            List<int> positions = Enumerable.Range(0, meshTriangles.Length).Where(i => meshTriangles[i] == vert).ToList();
+            List<int> connectedVerts = new List<int>();
 
-        int[] loopVerts = new int[verts.Length];
-        loopVerts[0] = 0;
-
-
-        for (int j = 1; j < verts.Length; j++)
-        {
-            float[] angles = new float[verts.Length - 1];
-
-            for (int i = 0; i < angles.Length; i++)
+            foreach (int position in positions)
             {
-                angles[i] = 361; //angle will never be above 360.
+                int triNumber = (position / 3) * 3; //Which triangle
+
+                connectedVerts.Add(meshTriangles[triNumber]);
+                connectedVerts.Add(meshTriangles[triNumber + 1]);
+                connectedVerts.Add(meshTriangles[triNumber + 2]);
             }
 
-            for (int i = 1; i < verts.Length; i++)
+            connectedVerts = renderedVertsToMeshVerts(connectedVerts.ToArray(), meshVertices).ToList();
+
+            foreach (int connectedVert in connectedVerts)
             {
-                if (i != j)
+                if (verts.Contains(connectedVert) && connectedVert != vert)
                 {
-                    Vector3 lhs = vertPositions[j] - vertPositions[0];
-                    Vector3 rhs = vertPositions[i] - vertPositions[0];
-
-                    Vector3 crossProduct = Vector3.Cross(lhs, rhs);
-
-                    //Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
-
-                    float angle = calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
-
-                    if (crossProduct.y > 0)
-                    {
-                        angles[i - 1] = angle;
-                    }
-                    else
-                    {
-                        angles[i - 1] = 360 - angle;
-                    }
+                    edgeStruct edge;
+                    edge.vertexA = vert;
+                    edge.vertexB = connectedVert;
                 }
             }
 
-            int smallestAngleTo = -1;
-            float smallestAngle = 361;
-
-            for (int i = 0; i < angles.Length; i++)
-            {
-                if (angles[i] < smallestAngle)
-                {
-                    smallestAngle = angles[i];
-                    smallestAngleTo = i + 1;
-                }
-            }
-
-            if (smallestAngle < 361)
-            {
-                //Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
-                loopVerts[j] = smallestAngleTo;
-            }
+            Debug.Log("");
         }
 
-        int[] sortedVerts = new int[verts.Length];
-        sortedVerts[0] = verts[0];
+        return null;
 
-        int currentVert = 1;
+        //Vector3[] vertPositions = new Vector3[verts.Length];
 
-        for (int i = 1; i < sortedVerts.Length; i++)
-        {
-            sortedVerts[i] = verts[currentVert];
-            currentVert = loopVerts[currentVert];
-        }
+        //for (int i = 0; i < verts.Length; i++)
+        //{
+        //    vertPositions[i] = meshVertices[verts[i]];
+        //}
 
-        return sortedVerts;
+        //int[] loopVerts = new int[verts.Length];
+        //loopVerts[0] = 0;
+
+
+        //for (int j = 1; j < verts.Length; j++)
+        //{
+        //    float[] angles = new float[verts.Length - 1];
+
+        //    for (int i = 0; i < angles.Length; i++)
+        //    {
+        //        angles[i] = 361; //angle will never be above 360.
+        //    }
+
+        //    for (int i = 1; i < verts.Length; i++)
+        //    {
+        //        if (i != j)
+        //        {
+        //            Vector3 lhs = vertPositions[j] - vertPositions[0];
+        //            Vector3 rhs = vertPositions[i] - vertPositions[0];
+
+        //            Vector3 crossProduct = Vector3.Cross(lhs, rhs);
+
+        //            //Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
+
+        //            float angle = Mathf.Rad2Deg * calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
+
+        //            if (crossProduct.y > 0)
+        //            {
+        //                angles[i - 1] = angle;
+        //            }
+        //            else
+        //            {
+        //                angles[i - 1] = 360 - angle;
+        //            }
+        //        }
+        //    }
+
+        //    int smallestAngleTo = -1;
+        //    float smallestAngle = 361;
+
+        //    for (int i = 0; i < angles.Length; i++)
+        //    {
+        //        if (angles[i] < smallestAngle)
+        //        {
+        //            smallestAngle = angles[i];
+        //            smallestAngleTo = i + 1;
+        //        }
+        //    }
+
+        //    if (smallestAngle < 361)
+        //    {
+        //        //Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
+        //        loopVerts[j] = smallestAngleTo;
+        //    }
+        //}
+
+        //int[] sortedVerts = new int[verts.Length];
+        //sortedVerts[0] = verts[0];
+
+        //int currentVert = 1;
+
+        //for (int i = 1; i < sortedVerts.Length; i++)
+        //{
+        //    sortedVerts[i] = verts[currentVert];
+        //    currentVert = loopVerts[currentVert];
+        //}
+
+        //return sortedVerts;
     }
 }
