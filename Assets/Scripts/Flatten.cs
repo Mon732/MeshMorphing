@@ -53,16 +53,26 @@ public class Flatten : MonoBehaviour
 
         //int vert = 12;
 
-        //for (int i = 0; i < cachedMesh.vertices.Length; i++)
-        //{
-            int i = 12;
+        for (int i = 0; i < cachedMesh.vertices.Length; i++)
+        {
+            //int i = 12;
             //int i = 260;
 
             int[] neighbours = findNeighbours(i, cachedMesh.vertices, cachedMesh.triangles);
             neighbours = renderedVertsToMeshVerts(neighbours, cachedMesh.vertices);
 
-            neighbours = getLoop(neighbours, cachedMesh.vertices, cachedMesh.triangles);
+            List<int> vertsList = neighbours.ToList();
+            vertsList.RemoveAt(0);
+            neighbours = vertsList.ToArray();
 
+            List<int> loops = new List<int>();
+            
+            neighbours = getLoop(neighbours[0], neighbours, loops, cachedMesh.vertices, cachedMesh.triangles);
+
+            List<int> l = neighbours.ToList();
+            l.Insert(0, i);
+            neighbours = l.ToArray();
+            
             loopVerts = neighbours;
 
             vertsToDisplay = new List<int>();
@@ -93,10 +103,12 @@ public class Flatten : MonoBehaviour
                 highestCurvature = curvature;
                 highestVert = i;
             }
-        //}
+        }
 
-        //vertsToDisplay = findNeighbours(highestVert, cachedMesh.vertices, cachedMesh.triangles).ToList();
-        //loopVerts = getLoop(vertsToDisplay.ToArray(), cachedMesh.vertices);
+        List<int> loopList = new List<int>();
+
+        vertsToDisplay = findNeighbours(highestVert, cachedMesh.vertices, cachedMesh.triangles).ToList();
+        loopVerts = getLoop(vertsToDisplay[0], vertsToDisplay.ToArray(), loopList, cachedMesh.vertices, cachedMesh.triangles);
 
         verts = cachedMesh.vertices;
         triangles = cachedMesh.triangles;
@@ -258,119 +270,20 @@ public class Flatten : MonoBehaviour
         return indexes.Distinct().ToArray();
     }
 
-    int[] getLoop(int[] verts, Vector3[] meshVertices, int[] meshTriangles)
+    int[] getLoop(int startVert, int[] verts, List<int> loopVerts, Vector3[] vertices, int[] triangles)
     {
-        List<int> vertsList = verts.ToList();
-        vertsList.RemoveAt(0);
-        verts = vertsList.ToArray();
+        loopVerts.Add(startVert);
 
-        List<int> renderedVerts = meshVertsToRenderedVerts(verts, meshVertices).ToList();
+        int[] neighbours = findNeighbours(startVert, vertices, triangles);
 
-        foreach (int vert in verts)
+        foreach (int neighbour in neighbours)
         {
-            List<int> positions = Enumerable.Range(0, meshTriangles.Length).Where(i => meshTriangles[i] == vert).ToList();
-            List<int> connectedVerts = new List<int>();
-
-            foreach (int position in positions)
+            if (verts.Contains(neighbour) && !loopVerts.Contains(neighbour))
             {
-                int triNumber = (position / 3) * 3; //Which triangle
-
-                connectedVerts.Add(meshTriangles[triNumber]);
-                connectedVerts.Add(meshTriangles[triNumber + 1]);
-                connectedVerts.Add(meshTriangles[triNumber + 2]);
+                loopVerts = getLoop(neighbour, verts, loopVerts, vertices, triangles).ToList();
             }
-
-            connectedVerts = renderedVertsToMeshVerts(connectedVerts.ToArray(), meshVertices).ToList();
-
-            foreach (int connectedVert in connectedVerts)
-            {
-                if (verts.Contains(connectedVert) && connectedVert != vert)
-                {
-                    edgeStruct edge;
-                    edge.vertexA = vert;
-                    edge.vertexB = connectedVert;
-                }
-            }
-
-            Debug.Log("");
         }
 
-        return null;
-
-        //Vector3[] vertPositions = new Vector3[verts.Length];
-
-        //for (int i = 0; i < verts.Length; i++)
-        //{
-        //    vertPositions[i] = meshVertices[verts[i]];
-        //}
-
-        //int[] loopVerts = new int[verts.Length];
-        //loopVerts[0] = 0;
-
-
-        //for (int j = 1; j < verts.Length; j++)
-        //{
-        //    float[] angles = new float[verts.Length - 1];
-
-        //    for (int i = 0; i < angles.Length; i++)
-        //    {
-        //        angles[i] = 361; //angle will never be above 360.
-        //    }
-
-        //    for (int i = 1; i < verts.Length; i++)
-        //    {
-        //        if (i != j)
-        //        {
-        //            Vector3 lhs = vertPositions[j] - vertPositions[0];
-        //            Vector3 rhs = vertPositions[i] - vertPositions[0];
-
-        //            Vector3 crossProduct = Vector3.Cross(lhs, rhs);
-
-        //            //Debug.Log(verts[j] + " to " + verts[i] + ": " + crossProduct);
-
-        //            float angle = Mathf.Rad2Deg * calcAngle(vertPositions[0], vertPositions[j], vertPositions[i]);
-
-        //            if (crossProduct.y > 0)
-        //            {
-        //                angles[i - 1] = angle;
-        //            }
-        //            else
-        //            {
-        //                angles[i - 1] = 360 - angle;
-        //            }
-        //        }
-        //    }
-
-        //    int smallestAngleTo = -1;
-        //    float smallestAngle = 361;
-
-        //    for (int i = 0; i < angles.Length; i++)
-        //    {
-        //        if (angles[i] < smallestAngle)
-        //        {
-        //            smallestAngle = angles[i];
-        //            smallestAngleTo = i + 1;
-        //        }
-        //    }
-
-        //    if (smallestAngle < 361)
-        //    {
-        //        //Debug.Log("Next vert is " + verts[smallestAngleTo] + " at " + smallestAngle + " degrees");
-        //        loopVerts[j] = smallestAngleTo;
-        //    }
-        //}
-
-        //int[] sortedVerts = new int[verts.Length];
-        //sortedVerts[0] = verts[0];
-
-        //int currentVert = 1;
-
-        //for (int i = 1; i < sortedVerts.Length; i++)
-        //{
-        //    sortedVerts[i] = verts[currentVert];
-        //    currentVert = loopVerts[currentVert];
-        //}
-
-        //return sortedVerts;
+        return loopVerts.ToArray();
     }
 }
